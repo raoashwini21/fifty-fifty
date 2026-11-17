@@ -4,7 +4,7 @@ import * as E from '../docs/engine.js';
 
 const layout = (board, seed) => {
   const r = E.rng(seed);
-  const allowed = [...Array(81).keys()].filter(i => E.canPlace(board, i));
+  const allowed = [...Array(board.n * board.n).keys()].filter(i => E.canPlace(board, i));
   const m = new Set();
   while (m.size < E.MINES) m.add(allowed[Math.floor(r() * allowed.length)]);
   return m;
@@ -53,4 +53,15 @@ test('the same trap plays out the same way every time', () => {
   const a = E.playRound(b, m, 42), c = E.playRound(b, m, 42);
   assert.equal(a.result, c.result);
   assert.equal(a.taps, c.taps);
+});
+
+test('the trap meter matches what really happens', () => {
+  let predicted = 0, actual = 0;
+  for (let g = 0; g < 400; g++) {
+    const b = E.makeBoard('meter' + (g % 20));
+    const m = layout(b, g + 3);
+    predicted += E.trapOdds(b, m).catchChance;
+    if (E.playRound(b, m, E.hashStr(b.seed + g)).result === 'boom') actual++;
+  }
+  assert.ok(Math.abs(predicted - actual) < 12, `predicted ${predicted.toFixed(1)} vs actual ${actual}`);
 });

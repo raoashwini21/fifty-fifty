@@ -3,8 +3,8 @@
 // it must guess it picks the square least likely to be a mine.
 // Pure functions, no DOM: the page and the tests both use this file.
 
-export const SIZE = 9;
-export const MINES = 10;
+export const SIZE = 6;
+export const MINES = 4;
 
 // ---------- seeded randomness (same daily board for everyone) ----------
 export function hashStr(s) {
@@ -38,20 +38,19 @@ export function neighbours(i, n = SIZE) {
 // A board has a landing pad (where the sweeper starts) and a few rocks.
 // The pad and the squares around it can't hold mines, like the classic
 // "first click is always safe".
-export function makeBoard(seedText) {
+export function makeBoard(seedText, n = SIZE, mines = MINES) {
   const rand = rng(hashStr(seedText));
-  const n = SIZE;
-  const pr = 2 + Math.floor(rand() * (n - 4));
-  const pc = 2 + Math.floor(rand() * (n - 4));
-  const pad = idx(pr, pc);
-  const safe = new Set([pad, ...neighbours(pad)]);
+  const pr = 1 + Math.floor(rand() * (n - 2));
+  const pc = 1 + Math.floor(rand() * (n - 2));
+  const pad = idx(pr, pc, n);
+  const safe = new Set([pad, ...neighbours(pad, n)]);
   const rocks = new Set();
-  const want = 3 + Math.floor(rand() * 3);
+  const want = 1 + Math.floor(rand() * 2);
   while (rocks.size < want) {
     const i = Math.floor(rand() * n * n);
     if (!safe.has(i)) rocks.add(i);
   }
-  return { n, mines: MINES, pad, safe: [...safe], rocks: [...rocks], seed: seedText };
+  return { n, mines, pad, safe: [...safe], rocks: [...rocks], seed: seedText };
 }
 
 export function canPlace(board, i) {
@@ -249,7 +248,7 @@ export function openCell(board, state, nums, i) {
 
 // Play a whole round with no animation. Returns the list of steps, so the
 // page can replay them at its own pace, plus the result.
-export function playRound(board, mineSet, tieSeed = 0) {
+export function playRound(board, mineSet, tieSeed = 0, { lucky = false } = {}) {
   const mines = new Set(mineSet);
   const nums = numbers(board, mines);
   const state = { open: new Set(), flags: new Set() };
@@ -273,6 +272,12 @@ export function playRound(board, mineSet, tieSeed = 0) {
       continue;
     }
     taps++;
+    if (lucky && mines.has(mv.cell)) {
+      // Preview: follow the path where he gets lucky, to count every guess he'd face.
+      const prob = probabilities(board, state, nums);
+      const alt = [...prob.keys()].find(i => !mines.has(i) && Math.abs(prob.get(i) - mv.chance) < 1e-9);
+      if (alt != null) mv.cell = alt;
+    }
     if (mines.has(mv.cell)) {
       steps.push({ kind: 'guess', cell: mv.cell, chance: mv.chance, reason: mv.reason, boom: true });
       return { steps, result: 'boom', taps, nums, mines, at: mv.cell };
@@ -285,4 +290,15 @@ export function playRound(board, mineSet, tieSeed = 0) {
 
 export function dateKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// What a trap is worth, before you press Go: how many times he'd have to
+// guess, and the chance at least one of those guesses lands on a mine.
+export function trapOdds(board, mineSet) {
+  const res = playRound(board, mineSet, 1, { lucky: true });
+  const guesses = res.steps.filter(s => s.kind === 'guess');
+  let survive = 1;
+  for (const g of guesses) survive *= 1 - g.chance;
+  if (res.result === 'boom') survive = 0;
+  return { guesses: guesses.length, catchChance: 1 - survive, risks: guesses.map(g => g.chance) };
 }

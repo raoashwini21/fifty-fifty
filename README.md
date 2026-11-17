@@ -9,7 +9,7 @@
 ## The remix
 
 In the game everyone remembers, you tap squares and hope.
-Here the roles swap. You hide 10 mines, press **Go**, and a little bomb-squad kid does the tapping.
+Here the roles swap. You hide 4 mines, press **Go**, and a little bomb-squad kid does the tapping.
 
 He's good. He reads every number, and he never steps on a mine he could have worked out.
 The only way to win is to hide your mines so cleverly that he's **forced to guess**, and guesses wrong.
@@ -26,7 +26,7 @@ The only way to win is to hide your mines so cleverly that he's **forced to gues
 3. If that's not enough, he works through every arrangement of mines that fits what's showing, weighted by how many ways the rest of the field can be filled, and gets each square's exact chance of being a mine.
 4. Only when no square is certain does he guess: the lowest chance wins.
 
-Random mine layouts catch him about 6% of the time. A good trap does a lot better.
+The trap meter shows, while you place mines, how often he would have to guess. Random layouts catch him about 3% of the time; a good trap gets past 75%.
 
 ## Run it
 

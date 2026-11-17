@@ -29,11 +29,19 @@
 
     <div class="play">
       <div class="bar">
-        <div class="counter" title="Mines left to hide"><img src="art/mine.webp" alt=""><b id="left">10</b></div>
+        <div class="counter" title="Mines left to hide"><img src="art/mine.webp" alt=""><b id="left">4</b></div>
         <div id="status" class="status">Hide your mines</div>
         <div class="counter taps" title="Sweeper's taps"><span>TAPS</span><b id="taps">0</b></div>
       </div>
       <div id="board" class="board" role="grid" aria-label="The field"></div>
+      <div id="meter" class="meter">
+        <div class="meter-head"><span>TRAP METER</span><span id="meterText"></span></div>
+        <div class="meter-track"><div id="meterFill" class="meter-fill"></div></div>
+      </div>
+      <div id="movesBox" class="moves" hidden>
+        <div class="meter-head"><span>HIS MOVES</span><span>newest first</span></div>
+        <ol id="moves"></ol>
+      </div>
       <div class="actions">
         <button id="clear" class="btn ghost">Clear</button>
         <button id="go" class="btn primary" disabled>Go, sweeper!</button>
@@ -57,10 +65,11 @@
   <dialog id="how">
     <h2>How to play</h2>
     <ol>
-      <li><b>Hide 10 mines</b> anywhere on the field. Not on the landing pad or right next to it.</li>
+      <li><b>Hide 4 mines</b> anywhere on the field. Not on the landing pad or right next to it.</li>
       <li>Press <b>Go</b>. The sweeper lands on the pad and starts clearing.</li>
       <li>It reads the numbers like a pro and never steps on a mine it could have worked out.</li>
       <li>You win only if your trap <b>forces it to guess</b>, and it guesses wrong.</li>
+      <li>Watch the <b>trap meter</b> while you place mines: it shows how often he'd have to guess.</li>
     </ol>
     <p>Everyone gets the same board each day. Share how fast you caught the sweeper.</p>
     <button id="howClose" class="btn primary">Got it</button>
