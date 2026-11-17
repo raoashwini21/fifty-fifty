@@ -1,0 +1,13 @@
+{
+  "name": "fifty-fifty",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minesweeper, flipped. You hide the mines, a sweeper who thinks out loud tries to survive.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "python3 -m http.server 8000 --directory docs",
+    "art": "python3 tools/art.py"
+  },
+  "license": "MIT"
+}
