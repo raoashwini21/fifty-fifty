@@ -42,8 +42,12 @@
       </div>
       <div id="board" class="board" role="grid" aria-label="The field"></div>
       <div id="meter" class="meter">
-        <div class="meter-head"><span>TRAP METER</span><span id="meterText"></span></div>
-        <div class="meter-track"><div id="meterFill" class="meter-fill"></div></div>
+        <div id="mineBuddy" class="mine-buddy calm"><img src="art/mine.webp" alt="A little mine"></div>
+        <div class="meter-body">
+          <p id="mineText" class="mine-text" aria-live="polite"></p>
+          <div class="meter-head"><span>TRAP METER</span><span id="meterText"></span></div>
+          <div class="meter-track"><div id="meterFill" class="meter-fill"></div></div>
+        </div>
       </div>
       <div id="movesBox" class="moves" hidden>
         <div class="meter-head"><span>HIS MOVES</span><span>newest first</span></div>
@@ -74,7 +78,8 @@
     <h2>How to play</h2>
     <ol>
       <li><b>Hide 4 mines</b> anywhere on the field. Not on the landing pad or right next to it.</li>
-      <li>Press <b>Go</b>. The sweeper lands on the pad and starts clearing.</li>
+      <li>The sweeper is blindfolded while you hide them. A little mine whispers how good your trap is.</li>
+      <li>Press <b>Go</b>. Blindfold off: he lands on the pad and starts clearing.</li>
       <li>It reads the numbers like a pro and never steps on a mine it could have worked out.</li>
       <li>You win only if your trap <b>forces it to guess</b>, and it guesses wrong.</li>
       <li>Watch the <b>trap meter</b> while you place mines: it shows how often he'd have to guess.</li>

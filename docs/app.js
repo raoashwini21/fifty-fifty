@@ -35,8 +35,13 @@ const state = {
 };
 
 // ---------- the sweeper's face and words ----------
+// While you hide mines he can't see: blindfold on. Until that pose is
+// painted, the eyes-shut pose stands in.
+let hasBlindfold = false;
+{ const im = new Image(); im.onload = () => { hasBlindfold = true; if (!state.playing && !state.done) kid('blindfold', 'bob'); }; im.src = ART('kid-blindfold'); }
 function kid(pose, motion = '') {
   const k = $('kid');
+  if (pose === 'blindfold' && !hasBlindfold) pose = 'guessing';
   if (!k.src.endsWith(ART(`kid-${pose}`))) k.src = ART(`kid-${pose}`);
   k.className = 'kid' + (motion ? ' ' + motion : '');
   if (motion === 'shake' || motion === 'jump') { void k.offsetWidth; }
@@ -98,27 +103,35 @@ function toggle(i) {
   react();
 }
 
-// The sweeper watches you build the trap, and gets nervous as it gets good.
+// The kid is blindfolded while you build the trap, so a little mine
+// whispers to you instead, and gets more excited as the trap gets better.
 let lastBand = null;
+function mineSay(text, mood) {
+  $('mineText').textContent = text;
+  const m = $('mineBuddy');
+  m.className = 'mine-buddy ' + (mood || '');
+  void m.offsetWidth; m.classList.add('talk');
+}
 function react() {
   const left = M() - state.mines.size;
   if (left) {
-    if (lastBand !== 'placing') {
-      kid('thinking', 'bob');
-      say(left === M() ? 'Go on, hide them. I’m not looking.' : pick(['Hmm. Interesting spot.', 'I see what you’re doing… maybe.', 'Keep going.']));
-    }
+    if (lastBand !== 'placing') kid('blindfold', 'bob');
     lastBand = 'placing';
+    mineSay(left === M()
+      ? `Psst! Hide us ${M()} mines. He can’t see a thing. Then press Go.`
+      : left === 1 ? 'One more of us. Make it count!' : pick(['Ooh, nice spot.', 'Hehe. Keep going.', `${left} more of us to hide.`]), 'calm');
     return;
   }
   const pct = state.lastPct ?? 0;
-  const band = pct === 0 ? 'easy' : pct < 50 ? 'unsure' : pct < 100 ? 'nervous' : 'doomed';
+  const g = state.lastGuesses ?? 0;
+  const band = pct === 0 ? 'easy' : pct < 50 ? 'unsure' : pct < 100 ? 'nasty' : 'perfect';
   sfx.meterTone(pct);
   if (band === lastBand) return;
   lastBand = band;
-  if (band === 'easy') { kid('victory'); say(pick(['Easy. I can read all of that.', 'Ha! I can see right through this one.'])); }
-  if (band === 'unsure') { kid('thinking', 'bob'); say('Hmm. I might have to guess once there…'); }
-  if (band === 'nervous') { kid('sweating', 'bob'); say(pick(['Uh… that’s a nasty one.', 'Wait. Why did you put it THERE?'])); }
-  if (band === 'doomed') { kid('sweating', 'shake'); say('Every safe-looking square… is a mine?! Please move one.', { tense: true }); }
+  if (band === 'easy') mineSay('Hmm. He’ll read that easily. Box him in so the numbers can’t help!', 'calm');
+  if (band === 'unsure') mineSay(`Ooh, he’ll have to guess ${g === 1 ? 'once' : g + ' times'}. Can we make it worse for him?`, 'warm');
+  if (band === 'nasty') mineSay('Hehehe, that’s nasty. He’ll be sweating. 😈', 'hot');
+  if (band === 'perfect') mineSay('PERFECT trap! Every safe-looking square is one of us. Press Go!', 'hot wild');
 }
 const pick = list => list[Math.floor(Math.random() * list.length)];
 function meter() {
@@ -128,19 +141,16 @@ function meter() {
   el.classList.remove('hot', 'warm');
   if (left) {
     fill.style.width = '0%';
-    txt.textContent = left === M() ? `Place ${M()} mines. I'll tell you how hard he'll find it.` : `Place ${plural(left, 'more mine')} to see his odds.`;
+    txt.textContent = `${state.mines.size} of ${M()} placed`;
     return;
   }
   const o = trapOdds(state.board, state.mines);
   const pct = Math.round(o.catchChance * 100);
   state.lastPct = pct;
+  state.lastGuesses = o.guesses;
   fill.style.width = Math.max(4, pct) + '%';
   if (pct >= 60) el.classList.add('hot'); else if (pct > 0) el.classList.add('warm');
-  txt.textContent = !o.guesses
-    ? 'He can read this whole field. No guessing needed. Box him in!'
-    : pct >= 100
-      ? 'Perfect trap. His safest-looking squares are all mines. 💣'
-      : `He'll have to guess ${o.guesses}× · ${pct}% chance you catch him`;
+  txt.textContent = !o.guesses ? '0% · no guesses' : `${pct}% · ${o.guesses} ${o.guesses === 1 ? 'guess' : 'guesses'}`;
 }
 function refresh() {
   const left = M() - state.mines.size;
@@ -198,7 +208,6 @@ async function go() {
   $('result').hidden = true;
   $('moves').replaceChildren(); moveNo = 0;
   $('movesBox').hidden = false;
-  $('meter').hidden = true;
   refresh();
   state.attempt++;
   const tie = hashStr(state.board.seed + [...state.mines].sort((a, b) => a - b).join(',') + ':' + state.attempt);
@@ -216,8 +225,13 @@ async function go() {
     if (k < 10) setTimeout(() => sfx.pop(k), k * 30 * speed);
   });
 
+  $('status').textContent = 'Blindfold off…';
+  mineSay('Shh! He’s coming. 🤫', 'calm');
+  kid('thinking', 'jump');
+  sfx.wake();
+  say('Okay, blindfold off! Let’s see what you did…');
+  await wait(1500);
   $('status').textContent = 'Sweeping…';
-  kid('thinking', 'bob');
   mark([state.board.pad], 'aim');
   say('I always start on the pad. It’s safe.');
   await wait(1300);
@@ -294,10 +308,12 @@ function finish(round, taps, at) {
     sfx.boom();
     $('board').classList.remove('shake'); void $('board').offsetWidth; $('board').classList.add('shake');
     kid('boom', 'shake');
+    mineSay('GOTCHA! 😈 That’s one of us he stepped on.', 'hot wild');
     say('…ow.', { label: 'SWEEPER' });
   } else {
     sfx.win();
     kid('victory', 'jump');
+    mineSay(state.lastPct > 0 ? 'Aww, he got lucky. Same trap again?' : 'He read us all. We need a sneakier hiding spot.', 'calm');
     say('Cleared it! Nice try though.');
   }
   // Show where your mines were.
@@ -362,7 +378,6 @@ function showResult(round, taps, at, total, nums) {
 function reset(newBoard, keep = null) {
   if (newBoard) { state.board = newBoard; state.attempt = 0; }
   $('movesBox').hidden = true;
-  $('meter').hidden = false;
   state.mines = new Set(keep || []);
   lastBand = null;
   state.done = false;
@@ -371,7 +386,7 @@ function reset(newBoard, keep = null) {
   build();
   for (const i of state.mines) { setImg(state.cells[i], 'mine'); state.cells[i].classList.add('mine'); }
   refresh();
-  kid('thinking', 'bob');
+  react();
 }
 
 // ---------- modes and levels ----------
@@ -426,7 +441,7 @@ $('free').addEventListener('click', () => {
   $('levels').hidden = true;
   $('mode').textContent = 'Random board';
   reset(makeBoard('free:' + Date.now() + ':' + Math.random()));
-  say('New field. Same me. Hide your mines.');
+  say('New field. Blindfold on. Hide your mines.');
 });
 $('share').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(state.share); $('copied').hidden = false; }
@@ -461,10 +476,11 @@ const wakeUp = () => {
   }, 1100);
   setTimeout(() => { document.body.classList.remove('waking'); r.remove(); }, 2700);
   setTimeout(() => {
-    kid('thinking', 'bob');
+    kid('blindfold', 'bob');
     say(state.level === 0 && !progress.done.length
-      ? `You remember this game. This time YOU hide the ${M()} mines, and I try to clear the field. Make me guess wrong!`
+      ? `You remember this game. This time YOU hide the ${M()} mines. I’m blindfolded, no peeking! Then I clear the field.`
       : LEVELS[state.level].tip);
+    react();
   }, 2400);
 };
 setTimeout(wakeUp, 2200);
