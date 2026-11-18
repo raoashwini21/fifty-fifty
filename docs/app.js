@@ -11,13 +11,18 @@ const M = () => state.board.mines;
 const today = dateKey();
 // Five hand-picked boards, easiest first. Each one has a trap that works;
 // the later ones hide it better.
+// Hints fade and moves shrink as you go: full meter → words only → warmer/colder → silence.
+// Placing your mines is free; every mine you pick back up costs one move.
 const LEVELS = [
-  { seed: 'level:29', tip: 'Tip: I can’t see past rocks. Mines tucked behind them are hard for me to read.' },
-  { seed: 'level:5', tip: 'Tip: the edges are where I have the fewest numbers to go on.' },
-  { seed: 'level:17', tip: 'Tip: if two squares look exactly the same to me, I have to flip a coin.' },
-  { seed: 'level:13', tip: 'Tip: only one rock this time. You’ll need more than a corner.' },
-  { seed: 'level:39', tip: 'Last one. Only the sneakiest trap works here. Good luck.' },
+  { hints: 'full', swaps: Infinity, seed: 'level:29', tip: 'Tip: I can’t see past rocks. Mines tucked behind them are hard for me to read.' },
+  { hints: 'full', swaps: 6, seed: 'level:5', tip: 'Tip: the edges are where I have the fewest numbers to go on.' },
+  { hints: 'words', swaps: 4, seed: 'level:17', tip: 'Tip: if two squares look exactly the same to me, I have to flip a coin.' },
+  { hints: 'vague', swaps: 2, seed: 'level:13', tip: 'Tip: only one rock this time. You’ll need more than a corner.' },
+  { hints: 'none', swaps: 0, seed: 'level:39', tip: 'Last one. Only the sneakiest trap works here. Good luck.' },
 ];
+const RULES = { daily: { hints: 'vague', swaps: 2 }, free: { hints: 'full', swaps: Infinity } };
+const rule = () => state.mode === 'levels' ? LEVELS[state.level] : RULES[state.mode];
+const swapsLeft = () => rule().swaps - state.swapsUsed;
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked: progress lasts this visit */ } },
@@ -30,6 +35,7 @@ const state = {
   attempt: 0,
   board: makeBoard(LEVELS[firstOpen].seed),
   mines: new Set(),
+  swapsUsed: 0,
   playing: false,
   cells: [],
 };
@@ -94,7 +100,14 @@ function toggle(i) {
     if (i === board.pad || board.safe.includes(i)) say('That’s my landing zone. No mines right next to it, please!');
     return;
   }
-  if (mines.has(i)) { mines.delete(i); setImg(c, null); c.classList.remove('mine'); sfx.remove(); }
+  if (mines.has(i)) {
+    if (swapsLeft() <= 0) {
+      sfx.click();
+      mineSay(rule().swaps ? 'Out of moves! We stay put now. Press Go 😈' : 'No take-backs this level! Where we land is where we stay.', 'warm');
+      return;
+    }
+    state.swapsUsed++;
+    mines.delete(i); setImg(c, null); c.classList.remove('mine'); sfx.remove(); }
   else {
     if (mines.size >= M()) { say(`That’s all ${M()}. Tap a mine to move it.`); sfx.click(); return; }
     mines.add(i); setImg(c, 'mine'); c.classList.add('mine'); sfx.place();
@@ -117,19 +130,34 @@ function react() {
   if (left) {
     if (lastBand !== 'placing') kid('blindfold', 'bob');
     lastBand = 'placing';
-    mineSay(left === M()
-      ? `Psst! Hide us ${M()} mines. He can’t see a thing. Then press Go.`
+    const sw = rule().swaps;
+    const rules = sw === Infinity ? '' : sw === 0 ? ' No take-backs this level!' : ` You can move us ${sw} times.`;
+    const quiet = { full: '', words: ' No numbers this time, just my gut.', vague: ' I’ll only say warmer or colder.', none: ' And I’m saying nothing. 🤐' }[rule().hints];
+    mineSay(left === M() && !state.swapsUsed
+      ? `Psst! Hide us ${M()} mines. He can’t see a thing.${rules}${quiet}`
       : left === 1 ? 'One more of us. Make it count!' : pick(['Ooh, nice spot.', 'Hehe. Keep going.', `${left} more of us to hide.`]), 'calm');
     return;
   }
   const pct = state.lastPct ?? 0;
   const g = state.lastGuesses ?? 0;
+  const hints = rule().hints;
+  if (hints === 'none') { lastBand = 'none'; mineSay('🤐 …', 'calm'); return; }
+  if (hints === 'vague') {
+    const prev = state.prevPct;
+    state.prevPct = pct;
+    lastBand = 'vague';
+    if (prev == null) mineSay('Hmm… could be anything. Move one of us and I’ll tell you warmer or colder.', 'calm');
+    else if (pct > prev) mineSay(pick(['Warmer… 🔥', 'Ooh, warmer!', 'Warmer. I like this.']), 'warm');
+    else if (pct < prev) mineSay(pick(['Colder… 🧊', 'Brr, colder.', 'Nope, colder.']), 'calm');
+    else mineSay('Same as before. Hmm.', 'calm');
+    return;
+  }
   const band = pct === 0 ? 'easy' : pct < 50 ? 'unsure' : pct < 100 ? 'nasty' : 'perfect';
-  sfx.meterTone(pct);
   if (band === lastBand) return;
+  sfx.meterTone(pct);
   lastBand = band;
   if (band === 'easy') mineSay('Hmm. He’ll read that easily. Box him in so the numbers can’t help!', 'calm');
-  if (band === 'unsure') mineSay(`Ooh, he’ll have to guess ${g === 1 ? 'once' : g + ' times'}. Can we make it worse for him?`, 'warm');
+  if (band === 'unsure') mineSay(hints === 'full' ? `Ooh, he’ll have to guess ${g === 1 ? 'once' : g + ' times'}. Can we make it worse for him?` : 'Ooh, he might have to guess. Can we make it worse?', 'warm');
   if (band === 'nasty') mineSay('Hehehe, that’s nasty. He’ll be sweating. 😈', 'hot');
   if (band === 'perfect') mineSay('PERFECT trap! Every safe-looking square is one of us. Press Go!', 'hot wild');
 }
@@ -139,6 +167,7 @@ function meter() {
   if (state.playing || state.done) return;
   const left = M() - state.mines.size;
   el.classList.remove('hot', 'warm');
+  el.classList.toggle('quiet', rule().hints !== 'full');
   if (left) {
     fill.style.width = '0%';
     txt.textContent = `${state.mines.size} of ${M()} placed`;
@@ -156,7 +185,13 @@ function refresh() {
   const left = M() - state.mines.size;
   $('left').textContent = left;
   $('go').disabled = left !== 0 || state.playing;
-  $('clear').disabled = state.playing || !state.mines.size;
+  $('clear').disabled = state.playing || !state.mines.size || swapsLeft() < state.mines.size;
+  if (!state.playing && !state.done) {
+    $('tapsLabel').textContent = 'MOVES';
+    $('tapsBox').title = 'Moves left: picking a mine back up costs one';
+    $('taps').textContent = swapsLeft() === Infinity ? '∞' : swapsLeft();
+    $('tapsBox').classList.toggle('out', swapsLeft() <= 0);
+  }
   $('go').disabled = $('go').disabled || state.done;
   meter();
   if (!state.playing && !state.done) $('status').textContent = left === M() ? `Hide your ${M()} mines` : left ? `Hide ${plural(left, 'more mine')}` : 'Ready when you are';
@@ -209,6 +244,7 @@ async function go() {
   $('moves').replaceChildren(); moveNo = 0;
   $('movesBox').hidden = false;
   refresh();
+  $('tapsLabel').textContent = 'TAPS'; $('tapsBox').title = 'Sweeper’s taps'; $('taps').textContent = 0; $('tapsBox').classList.remove('out');
   state.attempt++;
   const tie = hashStr(state.board.seed + [...state.mines].sort((a, b) => a - b).join(',') + ':' + state.attempt);
   const round = playRound(state.board, state.mines, tie);
@@ -342,11 +378,18 @@ function showResult(round, taps, at, total, nums) {
   if (won && lv >= 0 && !progress.done.includes(lv)) { progress.done.push(lv); store.set('ff-levels', progress.done); paintLevels(); }
   $('next').hidden = !(won && lv >= 0 && !last);
   $('again').textContent = won ? 'New trap' : 'Try again';
+  // Stars for a tidy trap: fewer mines picked back up is better.
+  const budget = rule().swaps, used = state.swapsUsed;
+  const stars = !won ? 0 : used === 0 ? 3 : used <= (budget === Infinity ? 2 : Math.max(1, Math.floor(budget / 2))) ? 2 : 1;
+  const starLine = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  const reveal = rule().hints !== 'full' ? ` Your trap was ${state.lastPct}% deadly.` : '';
   $('resultText').textContent = won
-    ? `Caught on tap ${taps}, with ${pct}% of the field still covered.`
+    ? `${starLine}  ${used ? plural(used, 'move') : 'No moves'} used. Caught on tap ${taps}, with ${pct}% of the field still covered.${reveal}`
     : state.lastPct > 0
       ? `Your trap gave you a ${state.lastPct}% chance, and he got lucky this time. Same mines, try again?`
-      : 'He read every number and never had to guess. Use the trap meter to box him in.';
+      : rule().hints === 'full'
+        ? 'He read every number and never had to guess. Use the trap meter to box him in.'
+        : 'He read every number and never had to guess. Your trap was 0% deadly. Hide us behind rocks and edges.';
   // A little emoji map of how it went, without giving away your mine spots.
   const rows = [];
   const n = state.board.n, rocks = new Set(state.board.rocks);
@@ -362,7 +405,7 @@ function showResult(round, taps, at, total, nums) {
   $('shareGrid').textContent = grid;
   const label = state.mode === 'daily' ? `Daily ${today}` : state.mode === 'levels' ? `Level ${state.level + 1}` : 'Random board';
   state.share = won
-    ? `Fifty-Fifty · ${label}\nCaught the sweeper on tap ${taps} 💣\n${grid}\n${location.href.split('#')[0]}`
+    ? `Fifty-Fifty · ${label} ${starLine}\nCaught the sweeper on tap ${taps} 💣\n${grid}\n${location.href.split('#')[0]}`
     : `Fifty-Fifty · ${label}\nThe sweeper cleared my field in ${taps} taps 🧹\n${grid}\n${location.href.split('#')[0]}`;
   $('copied').hidden = true;
   $('result').hidden = false;
@@ -379,9 +422,10 @@ function reset(newBoard, keep = null) {
   if (newBoard) { state.board = newBoard; state.attempt = 0; }
   $('movesBox').hidden = true;
   state.mines = new Set(keep || []);
+  state.swapsUsed = 0;
+  state.prevPct = null;
   lastBand = null;
   state.done = false;
-  $('taps').textContent = 0;
   $('result').hidden = true;
   build();
   for (const i of state.mines) { setImg(state.cells[i], 'mine'); state.cells[i].classList.add('mine'); }
@@ -424,7 +468,11 @@ function startDaily() {
 
 // ---------- wiring ----------
 $('go').addEventListener('click', go);
-$('clear').addEventListener('click', () => { if (!state.playing) { reset(); sfx.remove(); } });
+$('clear').addEventListener('click', () => {
+  if (state.playing || swapsLeft() < state.mines.size) return;
+  const used = state.swapsUsed + state.mines.size;
+  reset(); state.swapsUsed = used; refresh(); react(); sfx.remove();
+});
 $('again').addEventListener('click', () => {
   const won = state.lastWon;
   reset(null, won ? null : [...state.lastMines]);

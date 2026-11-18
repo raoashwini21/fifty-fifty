@@ -38,7 +38,7 @@
       <div class="bar">
         <div class="counter" title="Mines left to hide"><img src="art/mine.webp" alt=""><b id="left">4</b></div>
         <div id="status" class="status">Hide your mines</div>
-        <div class="counter taps" title="Sweeper's taps"><span>TAPS</span><b id="taps">0</b></div>
+        <div id="tapsBox" class="counter taps" title="Moves left"><span id="tapsLabel">MOVES</span><b id="taps">0</b></div>
       </div>
       <div id="board" class="board" role="grid" aria-label="The field"></div>
       <div id="meter" class="meter">
@@ -82,9 +82,11 @@
       <li>Press <b>Go</b>. Blindfold off: he lands on the pad and starts clearing.</li>
       <li>It reads the numbers like a pro and never steps on a mine it could have worked out.</li>
       <li>You win only if your trap <b>forces it to guess</b>, and it guesses wrong.</li>
-      <li>Watch the <b>trap meter</b> while you place mines: it shows how often he'd have to guess.</li>
+      <li>Placing your mines is free. <b>Picking one back up costs a move</b>, and later levels give you fewer.</li>
+      <li>Level 1 shows a full <b>trap meter</b>. After that the mine gets quieter: words, then just warmer or colder, then nothing.</li>
+      <li>Fewer moves used means more ★ when you catch him.</li>
     </ol>
-    <p>Beat 5 levels, then try the daily board: everyone gets the same one each day.</p>
+    <p>Beat 5 levels, then try the daily board: everyone gets the same one each day, with warmer/colder hints and 2 moves.</p>
     <button id="howClose" class="btn primary">Got it</button>
   </dialog>
 

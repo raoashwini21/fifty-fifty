@@ -187,3 +187,6 @@ body.waking * { transition: all 1.4s cubic-bezier(.2,.8,.2,1) !important; }
   .result img { height: 110px; margin-top: -70px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.meter.quiet .meter-head, .meter.quiet .meter-track { display: none; }
+.counter.out b { color: var(--coral); }
