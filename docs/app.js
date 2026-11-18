@@ -446,18 +446,26 @@ build();
 paintLevels();
 $('mode').textContent = `Level ${state.level + 1} of ${LEVELS.length}`;
 let woke = false;
+// The old game sits there for a moment, gets stamped REMIXED, and the stamp
+// flies at you while everything wakes up into the new look.
 const wakeUp = () => {
   if (woke) return; woke = true;
-  document.body.classList.add('waking');
-  document.body.classList.remove('old');
-  sfx.wake();
-  setTimeout(() => document.body.classList.remove('waking'), 800);
+  const r = $('remixed');
+  r.classList.add('stamp');
+  sfx.place();
+  setTimeout(() => {
+    r.classList.remove('stamp'); r.classList.add('fly');
+    document.body.classList.add('waking');
+    document.body.classList.remove('old');
+    sfx.wake();
+  }, 1100);
+  setTimeout(() => { document.body.classList.remove('waking'); r.remove(); }, 2700);
   setTimeout(() => {
     kid('thinking', 'bob');
     say(state.level === 0 && !progress.done.length
       ? `You remember this game. This time YOU hide the ${M()} mines, and I try to clear the field. Make me guess wrong!`
       : LEVELS[state.level].tip);
-  }, 650);
+  }, 2400);
 };
-setTimeout(wakeUp, 1300);
+setTimeout(wakeUp, 2200);
 document.addEventListener('pointerdown', wakeUp, { once: true });
