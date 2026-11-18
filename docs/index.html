@@ -15,11 +15,17 @@
   <header class="top">
     <h1 class="logo"><span>FIFTY</span><i>·</i><span>FIFTY</span></h1>
     <div class="meta">
-      <span id="mode">Daily board</span>
+      <span id="mode">Level 1</span>
+      <button id="speed" class="chip" aria-pressed="false" title="Sweeper speed">1×</button>
       <button id="sound" class="chip" aria-pressed="true" title="Sound">🔊</button>
       <button id="help" class="chip" title="How to play">?</button>
     </div>
   </header>
+
+  <nav class="modes">
+    <div class="tabs"><button id="tabLevels" class="tab on">Levels</button><button id="tabDaily" class="tab">Daily board</button></div>
+    <div id="levels" class="levels" aria-label="Levels"></div>
+  </nav>
 
   <section class="stage">
     <div class="sweeper">
@@ -56,7 +62,8 @@
     <pre id="shareGrid" class="grid-share"></pre>
     <div class="actions">
       <button id="share" class="btn primary">Copy result</button>
-      <button id="again" class="btn ghost">Try a new trap</button>
+      <button id="next" class="btn primary" hidden>Next level →</button>
+      <button id="again" class="btn ghost">Try again</button>
       <button id="free" class="btn ghost">Random board</button>
     </div>
     <p id="copied" class="copied" hidden>Copied! Paste it anywhere.</p>
@@ -71,7 +78,7 @@
       <li>You win only if your trap <b>forces it to guess</b>, and it guesses wrong.</li>
       <li>Watch the <b>trap meter</b> while you place mines: it shows how often he'd have to guess.</li>
     </ol>
-    <p>Everyone gets the same board each day. Share how fast you caught the sweeper.</p>
+    <p>Beat 5 levels, then try the daily board: everyone gets the same one each day.</p>
     <button id="howClose" class="btn primary">Got it</button>
   </dialog>
 

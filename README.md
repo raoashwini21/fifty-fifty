@@ -16,7 +16,8 @@ The only way to win is to hide your mines so cleverly that he's **forced to gues
 
 - 🧠 **He thinks out loud.** Every move comes with his reason: "That 2 already has its mines. The rest are safe."
 - 😰 **He sweats the guesses.** When nothing is certain, he picks the least risky square and tells you the odds. Then the drumroll.
-- 📅 **Same board for everyone, every day.** Share how fast your trap caught him.
+- 📈 **A trap meter.** As you place mines it shows how often he'd be forced to guess, and he gets visibly nervous as it climbs.
+- 🏆 **Five levels**, easiest first, then a **daily board** that's the same for everyone. Share how fast your trap caught him.
 - 🔒 **Runs on your device.** No accounts, no tracking, no network requests.
 
 ## How the sweeper plays

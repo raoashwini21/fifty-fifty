@@ -51,3 +51,5 @@ export const boom = () => { noise(1.1, { vol: 0.55, lp: 700 }); tone(80, 0.9, { 
 export const phew = () => { tone(660, 0.12, { vol: 0.1 }); tone(880, 0.22, { vol: 0.1, at: 0.1 }); };
 export const win = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, { type: 'triangle', vol: 0.12, at: i * 0.09 }));
 export const wake = () => { tone(110, 0.5, { type: 'sawtooth', vol: 0.05, slide: 4 }); tone(880, 0.3, { vol: 0.06, at: 0.45 }); };
+// A note that climbs with the trap meter.
+export const meterTone = pct => { tone(300 + pct * 6, 0.12, { type: 'triangle', vol: 0.08 }); if (pct >= 100) tone(1200, 0.2, { type: 'triangle', vol: 0.06, at: 0.08 }); };

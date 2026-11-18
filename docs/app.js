@@ -9,9 +9,26 @@ const wait = ms => sleep(ms * speed);
 const M = () => state.board.mines;
 
 const today = dateKey();
+// Five hand-picked boards, easiest first. Each one has a trap that works;
+// the later ones hide it better.
+const LEVELS = [
+  { seed: 'level:29', tip: 'Tip: I can’t see past rocks. Mines tucked behind them are hard for me to read.' },
+  { seed: 'level:5', tip: 'Tip: the edges are where I have the fewest numbers to go on.' },
+  { seed: 'level:17', tip: 'Tip: if two squares look exactly the same to me, I have to flip a coin.' },
+  { seed: 'level:13', tip: 'Tip: only one rock this time. You’ll need more than a corner.' },
+  { seed: 'level:39', tip: 'Last one. Only the sneakiest trap works here. Good luck.' },
+];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked: progress lasts this visit */ } },
+};
+const progress = { done: store.get('ff-levels', []) };
+const firstOpen = Math.min(progress.done.length, LEVELS.length - 1);
 const state = {
-  mode: 'daily',
-  board: makeBoard(`daily:${today}`),
+  mode: 'levels',
+  level: firstOpen,
+  attempt: 0,
+  board: makeBoard(LEVELS[firstOpen].seed),
   mines: new Set(),
   playing: false,
   cells: [],
@@ -78,7 +95,32 @@ function toggle(i) {
     mines.add(i); setImg(c, 'mine'); c.classList.add('mine'); sfx.place();
   }
   refresh();
+  react();
 }
+
+// The sweeper watches you build the trap, and gets nervous as it gets good.
+let lastBand = null;
+function react() {
+  const left = M() - state.mines.size;
+  if (left) {
+    if (lastBand !== 'placing') {
+      kid('thinking', 'bob');
+      say(left === M() ? 'Go on, hide them. I’m not looking.' : pick(['Hmm. Interesting spot.', 'I see what you’re doing… maybe.', 'Keep going.']));
+    }
+    lastBand = 'placing';
+    return;
+  }
+  const pct = state.lastPct ?? 0;
+  const band = pct === 0 ? 'easy' : pct < 50 ? 'unsure' : pct < 100 ? 'nervous' : 'doomed';
+  sfx.meterTone(pct);
+  if (band === lastBand) return;
+  lastBand = band;
+  if (band === 'easy') { kid('victory'); say(pick(['Easy. I can read all of that.', 'Ha! I can see right through this one.'])); }
+  if (band === 'unsure') { kid('thinking', 'bob'); say('Hmm. I might have to guess once there…'); }
+  if (band === 'nervous') { kid('sweating', 'bob'); say(pick(['Uh… that’s a nasty one.', 'Wait. Why did you put it THERE?'])); }
+  if (band === 'doomed') { kid('sweating', 'shake'); say('Every safe-looking square… is a mine?! Please move one.', { tense: true }); }
+}
+const pick = list => list[Math.floor(Math.random() * list.length)];
 function meter() {
   const el = $('meter'), fill = $('meterFill'), txt = $('meterText');
   if (state.playing || state.done) return;
@@ -91,6 +133,7 @@ function meter() {
   }
   const o = trapOdds(state.board, state.mines);
   const pct = Math.round(o.catchChance * 100);
+  state.lastPct = pct;
   fill.style.width = Math.max(4, pct) + '%';
   if (pct >= 60) el.classList.add('hot'); else if (pct > 0) el.classList.add('warm');
   txt.textContent = !o.guesses
@@ -150,13 +193,15 @@ const unmark = cls => state.cells.forEach(c => c.classList.remove(cls));
 async function go() {
   if (state.playing || state.mines.size !== M()) return;
   state.playing = true;
+  state.lastMines = new Set(state.mines);
   $('board').classList.add('playing');
   $('result').hidden = true;
   $('moves').replaceChildren(); moveNo = 0;
   $('movesBox').hidden = false;
   $('meter').hidden = true;
   refresh();
-  const tie = hashStr(state.board.seed + [...state.mines].sort((a, b) => a - b).join(','));
+  state.attempt++;
+  const tie = hashStr(state.board.seed + [...state.mines].sort((a, b) => a - b).join(',') + ':' + state.attempt);
   const round = playRound(state.board, state.mines, tie);
   const { nums } = round;
   let taps = 0;
@@ -268,14 +313,24 @@ function finish(round, taps, at) {
 // ---------- result + share ----------
 function showResult(round, taps, at, total, nums) {
   const won = at != null;
+  state.lastWon = won;
   const opened = state.cells.filter(c => c.classList.contains('open')).length;
   const left = Math.max(0, total - opened);
   const pct = Math.round((left / total) * 100);
   $('resultKid').src = ART(won ? 'kid-boom' : 'kid-victory');
-  $('resultTitle').textContent = won ? 'Gotcha! Your trap worked.' : 'The sweeper cleared your field.';
+  const lv = state.mode === 'levels' ? state.level : -1;
+  const last = lv === LEVELS.length - 1;
+  $('resultTitle').textContent = won
+    ? (lv >= 0 ? (last ? 'You beat every level! 🏆' : `Gotcha! Level ${lv + 2} unlocked.`) : 'Gotcha! Your trap worked.')
+    : 'The sweeper cleared your field.';
+  if (won && lv >= 0 && !progress.done.includes(lv)) { progress.done.push(lv); store.set('ff-levels', progress.done); paintLevels(); }
+  $('next').hidden = !(won && lv >= 0 && !last);
+  $('again').textContent = won ? 'New trap' : 'Try again';
   $('resultText').textContent = won
     ? `Caught on tap ${taps}, with ${pct}% of the field still covered.`
-    : `It read every number and never had to gamble on a mine. Try making it guess.`;
+    : state.lastPct > 0
+      ? `Your trap gave you a ${state.lastPct}% chance, and he got lucky this time. Same mines, try again?`
+      : 'He read every number and never had to guess. Use the trap meter to box him in.';
   // A little emoji map of how it went, without giving away your mine spots.
   const rows = [];
   const n = state.board.n, rocks = new Set(state.board.rocks);
@@ -289,7 +344,7 @@ function showResult(round, taps, at, total, nums) {
   }
   const grid = rows.join('\n');
   $('shareGrid').textContent = grid;
-  const label = state.mode === 'daily' ? `Daily ${today}` : 'Random board';
+  const label = state.mode === 'daily' ? `Daily ${today}` : state.mode === 'levels' ? `Level ${state.level + 1}` : 'Random board';
   state.share = won
     ? `Fifty-Fifty · ${label}\nCaught the sweeper on tap ${taps} 💣\n${grid}\n${location.href.split('#')[0]}`
     : `Fifty-Fifty · ${label}\nThe sweeper cleared my field in ${taps} taps 🧹\n${grid}\n${location.href.split('#')[0]}`;
@@ -304,24 +359,71 @@ function showResult(round, taps, at, total, nums) {
   setTimeout(() => $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300);
 }
 
-function reset(newBoard) {
-  if (newBoard) state.board = newBoard;
+function reset(newBoard, keep = null) {
+  if (newBoard) { state.board = newBoard; state.attempt = 0; }
   $('movesBox').hidden = true;
   $('meter').hidden = false;
-  state.mines = new Set();
+  state.mines = new Set(keep || []);
+  lastBand = null;
   state.done = false;
   $('taps').textContent = 0;
   $('result').hidden = true;
   build();
+  for (const i of state.mines) { setImg(state.cells[i], 'mine'); state.cells[i].classList.add('mine'); }
+  refresh();
   kid('thinking', 'bob');
+}
+
+// ---------- modes and levels ----------
+function paintLevels() {
+  const el = $('levels');
+  el.replaceChildren();
+  LEVELS.forEach((L, k) => {
+    const open = k === 0 || progress.done.includes(k - 1) || progress.done.includes(k);
+    const b = document.createElement('button');
+    b.className = 'lvl' + (progress.done.includes(k) ? ' done' : '') + (state.mode === 'levels' && state.level === k ? ' on' : '');
+    b.textContent = progress.done.includes(k) ? '★' : k + 1;
+    b.disabled = !open;
+    b.title = open ? `Level ${k + 1}` : 'Beat the level before to unlock';
+    b.addEventListener('click', () => startLevel(k));
+    el.append(b);
+  });
+  $('tabLevels').classList.toggle('on', state.mode === 'levels');
+  $('tabDaily').classList.toggle('on', state.mode === 'daily');
+  el.hidden = state.mode !== 'levels';
+}
+function startLevel(k) {
+  state.mode = 'levels'; state.level = k;
+  reset(makeBoard(LEVELS[k].seed));
+  paintLevels();
+  $('mode').textContent = `Level ${k + 1} of ${LEVELS.length}`;
+  say(LEVELS[k].tip);
+}
+function startDaily() {
+  state.mode = 'daily';
+  reset(makeBoard(`daily:${today}`));
+  paintLevels();
+  $('mode').textContent = `Daily · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  say('Today’s board. Same for everyone. Show me your best trap.');
 }
 
 // ---------- wiring ----------
 $('go').addEventListener('click', go);
 $('clear').addEventListener('click', () => { if (!state.playing) { reset(); sfx.remove(); } });
-$('again').addEventListener('click', () => { reset(); say('Another trap? Bring it on.'); });
+$('again').addEventListener('click', () => {
+  const won = state.lastWon;
+  reset(null, won ? null : [...state.lastMines]);
+  say(won ? 'Another trap? Bring it on.' : 'Same trap, new nerves. Go when ready.');
+});
+$('next').addEventListener('click', () => startLevel(state.level + 1));
+$('tabLevels').addEventListener('click', () => startLevel(Math.min(progress.done.length, LEVELS.length - 1)));
+$('tabDaily').addEventListener('click', startDaily);
+const sp = $('speed');
+sp.addEventListener('click', () => { speed = speed === 1 ? 0.45 : 1; sp.textContent = speed === 1 ? '1×' : '2×'; sp.setAttribute('aria-pressed', speed !== 1); });
 $('free').addEventListener('click', () => {
   state.mode = 'free';
+  paintLevels();
+  $('levels').hidden = true;
   $('mode').textContent = 'Random board';
   reset(makeBoard('free:' + Date.now() + ':' + Math.random()));
   say('New field. Same me. Hide your mines.');
@@ -338,12 +440,11 @@ snd.addEventListener('click', () => { sfx.setSound(!sfx.soundOn()); paintSound()
 paintSound();
 // Hold Shift (or add #fast) to speed the sweeper up.
 if (location.hash === '#fast') speed = 0.35;
-addEventListener('keydown', e => { if (e.key === 'Shift') speed = 0.35; });
-addEventListener('keyup', e => { if (e.key === 'Shift' && location.hash !== '#fast') speed = 1; });
 
 // ---------- start: the old grid wakes up ----------
 build();
-$('mode').textContent = `Daily board · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+paintLevels();
+$('mode').textContent = `Level ${state.level + 1} of ${LEVELS.length}`;
 let woke = false;
 const wakeUp = () => {
   if (woke) return; woke = true;
@@ -353,7 +454,9 @@ const wakeUp = () => {
   setTimeout(() => document.body.classList.remove('waking'), 800);
   setTimeout(() => {
     kid('thinking', 'bob');
-    say(`You remember this game. This time, you hide the ${M()} mines. I’ll try to clear the field.`);
+    say(state.level === 0 && !progress.done.length
+      ? `You remember this game. This time YOU hide the ${M()} mines, and I try to clear the field. Make me guess wrong!`
+      : LEVELS[state.level].tip);
   }, 650);
 };
 setTimeout(wakeUp, 1300);
