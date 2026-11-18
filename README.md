@@ -1,23 +1,27 @@
 # Fifty-Fifty
 
-**Minesweeper, flipped.** You hide the mines. A sweeper who thinks out loud tries to survive.
+![Fifty-Fifty: you hide the mines, he has to guess](docs/cover.jpg)
 
-> Built for Hackyard Yard #7 · theme: **Remix** · work in progress
+**Minesweeper, flipped.** You hide the mines. A genius bomb-squad kid has to clear the field.
+
+> Built for Hackyard Yard #7 · theme: **Remix**
 
 **Play:** [raoashwini21.github.io/fifty-fifty](https://raoashwini21.github.io/fifty-fifty/)
 
 ## The remix
 
 In the game everyone remembers, you tap squares and hope.
-Here the roles swap. You hide 4 mines, press **Go**, and a little bomb-squad kid does the tapping.
+Here the roles swap. You hide 4 mines while the kid is blindfolded. Press **Go**, the blindfold comes off, and he does the tapping.
 
 He's good. He reads every number, and he never steps on a mine he could have worked out.
 The only way to win is to hide your mines so cleverly that he's **forced to guess**, and guesses wrong.
 
 - 🧠 **He thinks out loud.** Every move comes with his reason: "That 2 already has its mines. The rest are safe."
 - 😰 **He sweats the guesses.** When nothing is certain, he picks the least risky square and tells you the odds. Then the drumroll.
-- 📈 **A trap meter.** As you place mines it shows how often he'd be forced to guess, and he gets visibly nervous as it climbs.
-- 🏆 **Five levels**, easiest first, then a **daily board** that's the same for everyone. Share how fast your trap caught him.
+- 💣 **A mine sidekick.** While you build the trap, a little mine whispers how evil it is, from "he'll read that easily" to "PERFECT trap!".
+- 📉 **Hints fade, moves run out.** Placing mines is free; picking one back up costs a move. Level 1 has a full trap meter and unlimited moves. Then it's words only, then just "warmer" or "colder", and by level 5 the mine says nothing and there are no take-backs.
+- ⭐ **Stars for tidy traps.** Catch him using fewer moves for more stars.
+- 🏆 **Five levels**, then a **daily board** that's the same for everyone (warmer/colder hints, 2 moves). Share your result without giving away where your mines were.
 - 🔒 **Runs on your device.** No accounts, no tracking, no network requests.
 
 ## How the sweeper plays
@@ -40,4 +44,4 @@ No build step. The game is plain HTML, CSS and JavaScript in `docs/`.
 
 ---
 
-MIT licence · Fonts: Barlow and JetBrains Mono (SIL Open Font License) · Art painted for this project during build week.
+MIT licence (art excluded) · Fonts: Barlow and JetBrains Mono (SIL Open Font License) · Art painted for this project during build week.

@@ -11,7 +11,7 @@ from scipy import ndimage
 SRC, OUT = 'art-src', 'docs/art'
 CUT = {  # name: max height of the packed image
     'kid-thinking': 720, 'kid-sweating': 720, 'kid-guessing': 720, 'kid-boom': 720,
-    'kid-victory': 720, 'kid-ready': 720, 'kid-blindfold': 720, 'mine': 256, 'flag': 256,
+    'kid-victory': 720, 'kid-blindfold': 720, 'mine': 256, 'flag': 256,
 }
 
 def cutout(path, height):
